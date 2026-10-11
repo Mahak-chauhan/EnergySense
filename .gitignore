@@ -1,0 +1,37 @@
+__pycache__/
+*.ipynb_checkpoints/
+.DS_Store
+*.pyc
+*.pyo
+
+# Ignore temporary and test scripts
+create_nb.py
+update_nb.py
+test_pipeline.py
+test_app_logic.py
+train.py
+audit.py
+
+# Ignore large intermediate processing files
+processed_energy_features.csv
+
+# Note: final_model.pkl, feature_columns.pkl, and recent_history.csv 
+# are intentionally tracked for deployment.
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS files
+Thumbs.db
