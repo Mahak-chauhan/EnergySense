@@ -5,9 +5,6 @@ import streamlit as st
 import altair as alt
 from features import create_features
 
-# ---------------------------------------------------------
-# Page Configuration
-# ---------------------------------------------------------
 st.set_page_config(
     page_title="EnergySense — AI Energy Forecasting",
     page_icon="⚡",
@@ -15,12 +12,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Relative Project Directory
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ---------------------------------------------------------
-# Custom Styling: Vibrant Dark, Minimal, Premium SaaS Aesthetic
-# ---------------------------------------------------------
+
 CUSTOM_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
@@ -200,28 +195,27 @@ footer {visibility: hidden;}
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# Artifact Loading Functions (Relative to BASE_DIR)
-# ---------------------------------------------------------
+
+
+
 @st.cache_resource
 def load_model_and_artifacts():
-    """Load model and trained feature columns once using relative paths."""
+
     model_path = os.path.join(BASE_DIR, "final_model.pkl")
     feature_cols_path = os.path.join(BASE_DIR, "feature_columns.pkl")
-    
+
     model = joblib.load(model_path)
     feature_cols = joblib.load(feature_cols_path)
     return model, feature_cols
 
 @st.cache_data
 def load_recent_history():
-    """Load clean historical sequence to seed the recursive forecast engine."""
+
     history_path = os.path.join(BASE_DIR, "recent_history.csv")
     df = pd.read_csv(history_path, index_col=0, parse_dates=True)
     df = df.sort_index()
     return df['energy_consumption']
 
-# Load required components
 try:
     model, feature_cols = load_model_and_artifacts()
     energy_history = load_recent_history()
@@ -229,9 +223,7 @@ except Exception as e:
     st.error(f"Error loading system artifacts: {e}")
     st.stop()
 
-# ---------------------------------------------------------
-# Header & Project Overview
-# ---------------------------------------------------------
+
 st.markdown('<div class="badge-pill">⚡ Intelligent Grid Intelligence</div>', unsafe_allow_html=True)
 st.markdown('<h1 class="brand-title">Energy<span class="brand-gradient">Sense</span></h1>', unsafe_allow_html=True)
 st.markdown(
@@ -242,9 +234,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------------------------------------------------
-# Origin Status Bar
-# ---------------------------------------------------------
 last_timestamp = energy_history.index[-1]
 last_val = energy_history.iloc[-1]
 
@@ -279,9 +268,9 @@ with c_stat3:
 
 st.write("")
 
-# ---------------------------------------------------------
-# Forecast Configuration & Control
-# ---------------------------------------------------------
+
+
+
 st.markdown("### 🔮 Forecast Configuration")
 
 horizon_col, btn_col = st.columns([3, 1], vertical_alignment="bottom")
@@ -296,7 +285,7 @@ with horizon_col:
     selected_label = st.radio(
         "Select Forecast Horizon:",
         options=list(horizon_map.keys()),
-        index=2,  # Default to 12 Hours
+        index=2,
         horizontal=True
     )
     selected_horizon = horizon_map[selected_label]
@@ -304,38 +293,38 @@ with horizon_col:
 with btn_col:
     run_button = st.button("⚡ Run Forecast", use_container_width=True)
 
-# ---------------------------------------------------------
-# Forecasting Engine (Recursive Multi-Step)
-# ---------------------------------------------------------
-# Generate forecast automatically or upon button click
+
+
+
+
 with st.spinner("Computing recursive multi-step forecast..."):
     current_history = energy_history.copy()
     predictions = []
-    
+
     for step in range(1, selected_horizon + 1):
         future_time = current_history.index[-1] + pd.Timedelta(hours=1)
-        
-        # Build features exactly matching training definitions
+
+
         features_df = create_features(current_history, [future_time], is_training=False)
         features_df = features_df[feature_cols]
-        
-        # Predict & constrain non-negative
+
+
         pred = max(0.0, float(model.predict(features_df)[0]))
-        
+
         predictions.append({
             "Date & Time": future_time,
             "Estimated Consumption (kW)": pred,
             "Change from Origin (kW)": pred - last_val
         })
-        
-        # Append estimated value for recursive lags
+
+
         current_history.loc[future_time] = pred
 
 forecast_df = pd.DataFrame(predictions).set_index("Date & Time")
 
-# ---------------------------------------------------------
-# Forecast Summary Metrics
-# ---------------------------------------------------------
+
+
+
 avg_pred = forecast_df["Estimated Consumption (kW)"].mean()
 max_pred = forecast_df["Estimated Consumption (kW)"].max()
 min_pred = forecast_df["Estimated Consumption (kW)"].min()
@@ -381,12 +370,12 @@ with m4:
 
 st.write("")
 
-# ---------------------------------------------------------
-# Interactive Forecast Line Chart (Altair)
-# ---------------------------------------------------------
+
+
+
 st.markdown("### 📈 Load Trajectory Visualization")
 
-# Prepare combined time series with last 12 hours of observed context
+
 context_hours = 12
 hist_slice = energy_history.iloc[-context_hours:]
 hist_records = pd.DataFrame({
@@ -401,7 +390,7 @@ forecast_records = pd.DataFrame({
     "Series": "Projected Forecast (Estimate)"
 })
 
-# Add bridging point so the line connects cleanly from T0 to T1
+
 bridge_record = pd.DataFrame({
     "Timestamp": [last_timestamp],
     "Consumption (kW)": [last_val],
@@ -479,9 +468,9 @@ st.caption(
     "causing forecast uncertainty to accumulate over time."
 )
 
-# ---------------------------------------------------------
-# Secondary Forecast Data Table (Expander)
-# ---------------------------------------------------------
+
+
+
 with st.expander("📋 View Detailed Hourly Forecast Table", expanded=False):
     table_display = forecast_df.copy()
     table_display.index = table_display.index.strftime("%Y-%m-%d %H:%M")
@@ -493,9 +482,9 @@ with st.expander("📋 View Detailed Hourly Forecast Table", expanded=False):
         use_container_width=True
     )
 
-# ---------------------------------------------------------
-# Model Performance & Benchmark Validation (Holdout)
-# ---------------------------------------------------------
+
+
+
 st.markdown("### 📊 Model Architecture & Holdout Benchmark")
 st.markdown(
     '<p style="font-size:0.88rem;color:#94A3B8;margin-bottom:1rem;">'
@@ -554,9 +543,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------------------------------------------------
-# Footer
-# ---------------------------------------------------------
+
+
+
 st.markdown(
     """
     <div style="margin-top:2.5rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,0.06);font-size:0.78rem;color:#64748B;display:flex;justify-content:space-between;align-items:center;">
